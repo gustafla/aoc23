@@ -8,7 +8,7 @@ const Error = error{
     InvalidSet,
 };
 
-fn parse_integer(str: []const u8) Error!usize {
+fn parseInteger(str: []const u8) Error!usize {
     var n: usize = 0;
 
     // Keep count of place (ones, tens, hundreds, ...)
@@ -36,7 +36,7 @@ fn parse_integer(str: []const u8) Error!usize {
     return n;
 }
 
-fn count_characters(str: []const u8, isFn: *const fn (c: u8) bool) usize {
+fn countCharacters(str: []const u8, isFn: *const fn (c: u8) bool) usize {
     var n: usize = 0;
     for (str) |char| {
         if (!isFn(char)) {
@@ -47,7 +47,7 @@ fn count_characters(str: []const u8, isFn: *const fn (c: u8) bool) usize {
     return n;
 }
 
-fn parse_id(game: []const u8) Error!struct { []const u8, usize } {
+fn parseId(game: []const u8) Error!struct { []const u8, usize } {
     if (game.len < 7) {
         return Error.InvalidId;
     }
@@ -59,8 +59,8 @@ fn parse_id(game: []const u8) Error!struct { []const u8, usize } {
 
     // Count digits
     const g = game[5..];
-    const digits = g[count_characters(g, std.ascii.isWhitespace)..];
-    const n_digits = count_characters(digits, std.ascii.isDigit);
+    const digits = g[countCharacters(g, std.ascii.isWhitespace)..];
+    const n_digits = countCharacters(digits, std.ascii.isDigit);
 
     // Check for id number presence
     if (n_digits == 0) {
@@ -77,7 +77,7 @@ fn parse_id(game: []const u8) Error!struct { []const u8, usize } {
         return Error.InvalidId;
     }
 
-    const id = try parse_integer(digits[0..n_digits]);
+    const id = try parseInteger(digits[0..n_digits]);
 
     return .{ digits[n_digits + 1 ..], id };
 }
@@ -85,7 +85,7 @@ fn parse_id(game: []const u8) Error!struct { []const u8, usize } {
 const color_names: [3][]const u8 = .{ "red", "green", "blue" };
 const Color = enum { red, green, blue };
 
-fn parse_color(game: []const u8) Error!struct { []const u8, Color } {
+fn parseColor(game: []const u8) Error!struct { []const u8, Color } {
     for (color_names, 0..) |color_name, i| {
         // Check that available length matches expectation
         if (color_name.len > game.len) {
@@ -102,22 +102,22 @@ fn parse_color(game: []const u8) Error!struct { []const u8, Color } {
     return Error.InvalidColor;
 }
 
-fn parse_cubes(game: []const u8) Error!struct { []const u8, usize, Color } {
+fn parseCubes(game: []const u8) Error!struct { []const u8, usize, Color } {
     // Count digits
-    const n_digits = count_characters(game, std.ascii.isDigit);
+    const n_digits = countCharacters(game, std.ascii.isDigit);
     if (n_digits == 0) {
         return Error.InvalidCubes;
     }
 
     // Count spaces after digits
-    const n_spaces = count_characters(game[n_digits..], std.ascii.isWhitespace);
+    const n_spaces = countCharacters(game[n_digits..], std.ascii.isWhitespace);
     if (n_spaces == 0) {
         return Error.InvalidCubes;
     }
 
     // Parse color and count
-    const color = try parse_color(game[n_digits + n_spaces ..]);
-    const count = try parse_integer(game[0..n_digits]);
+    const color = try parseColor(game[n_digits + n_spaces ..]);
+    const count = try parseInteger(game[0..n_digits]);
 
     return .{ color[0], count, color[1] };
 }
@@ -133,7 +133,7 @@ const Set = struct {
         self.counts[i] = count;
     }
 
-    fn update_maximum(self: *Set, s: Set) void {
+    fn updateMaximum(self: *Set, s: Set) void {
         for (&self.counts, s.counts) |*i, j| {
             if (j > i.*) {
                 i.* = j;
@@ -141,7 +141,7 @@ const Set = struct {
         }
     }
 
-    fn is_possible(self: Set, limits: [3]usize) bool {
+    fn isPossible(self: Set, limits: [3]usize) bool {
         for (self.counts, limits) |i, j| {
             if (i > j) {
                 return false;
@@ -165,13 +165,13 @@ const Set = struct {
     }
 };
 
-fn parse_set(game: []const u8) Error!struct { []const u8, Set } {
+fn parseSet(game: []const u8) Error!struct { []const u8, Set } {
     var set = std.mem.zeroInit(Set, .{});
-    var position = game[count_characters(game, std.ascii.isWhitespace)..];
+    var position = game[countCharacters(game, std.ascii.isWhitespace)..];
 
     while (position.len > 0 and position[0] != ';') {
         // Parse a cubes value
-        const cubes = try parse_cubes(position);
+        const cubes = try parseCubes(position);
         try set.update(cubes[2], cubes[1]);
         position = cubes[0];
 
@@ -181,7 +181,7 @@ fn parse_set(game: []const u8) Error!struct { []const u8, Set } {
         }
 
         // Walk spaces
-        position = position[count_characters(position, std.ascii.isWhitespace)..];
+        position = position[countCharacters(position, std.ascii.isWhitespace)..];
     }
 
     return .{ position, set };
@@ -203,16 +203,16 @@ pub fn main() !void {
         var min_set = std.mem.zeroInit(Set, .{});
 
         // Parse id
-        const id = try parse_id(line);
+        const id = try parseId(line);
 
         var position = id[0];
         while (position.len > 0) {
-            const set = try parse_set(position);
+            const set = try parseSet(position);
             set[1].print();
             //if (!set[1].is_possible(.{ 12, 13, 14 })) {
             //    continue :lines;
             //}
-            min_set.update_maximum(set[1]);
+            min_set.updateMaximum(set[1]);
             position = set[0];
 
             // Walk semicolon

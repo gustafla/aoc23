@@ -2,7 +2,7 @@ const std = @import("std");
 
 const spelled: [9][]const u8 = .{ "one", "two", "three", "four", "five", "six", "seven", "eight", "nine" };
 
-fn search_slice_for_num(line: []const u8) ?usize {
+fn searchSliceForNum(line: []const u8) ?usize {
     if (std.ascii.isDigit(line[0])) {
         return line[0] - '0';
     }
@@ -22,7 +22,7 @@ fn search(line: []const u8, last: bool) usize {
     const len: isize = @intCast(line.len);
     var i: isize = if (last) len - 1 else 0;
     while (i >= 0 and i < len) : (i += if (last) -1 else 1) {
-        if (search_slice_for_num(line[@intCast(i)..])) |num| {
+        if (searchSliceForNum(line[@intCast(i)..])) |num| {
             if (last) {
                 return num;
             }
