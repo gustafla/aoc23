@@ -133,6 +133,14 @@ const Set = struct {
         self.counts[i] = count;
     }
 
+    fn update_maximum(self: *Set, s: Set) void {
+        for (&self.counts, s.counts) |*i, j| {
+            if (j > i.*) {
+                i.* = j;
+            }
+        }
+    }
+
     fn is_possible(self: Set, limits: [3]usize) bool {
         for (self.counts, limits) |i, j| {
             if (i > j) {
@@ -140,6 +148,10 @@ const Set = struct {
             }
         }
         return true;
+    }
+
+    fn power(self: Set) usize {
+        return self.counts[0] * self.counts[1] * self.counts[2];
     }
 
     fn print(self: Set) void {
@@ -183,10 +195,12 @@ pub fn main() !void {
     var sum: usize = 0;
 
     var line_buf: [1024]u8 = undefined;
-    lines: while (try in_r.readUntilDelimiterOrEof(&line_buf, '\n')) |line| {
+    while (try in_r.readUntilDelimiterOrEof(&line_buf, '\n')) |line| {
         if (line.len == 0) {
             continue;
         }
+
+        var min_set = std.mem.zeroInit(Set, .{});
 
         // Parse id
         const id = try parse_id(line);
@@ -195,9 +209,10 @@ pub fn main() !void {
         while (position.len > 0) {
             const set = try parse_set(position);
             set[1].print();
-            if (!set[1].is_possible(.{ 12, 13, 14 })) {
-                continue :lines;
-            }
+            //if (!set[1].is_possible(.{ 12, 13, 14 })) {
+            //    continue :lines;
+            //}
+            min_set.update_maximum(set[1]);
             position = set[0];
 
             // Walk semicolon
@@ -207,7 +222,10 @@ pub fn main() !void {
         }
 
         // Sum up id for a valid game
-        sum += id[1];
+        //sum += id[1];
+
+        // Sum up power for minimum set
+        sum += min_set.power();
     }
 
     std.debug.print("{}\n", .{sum});
