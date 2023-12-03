@@ -1,33 +1,5 @@
 const std = @import("std");
 
-fn parseInteger(str: []const u8) ?usize {
-    var n: usize = 0;
-
-    // Keep count of place (ones, tens, hundreds, ...)
-    var place: usize = 1;
-
-    // Iterate digits from last to first
-    const len: isize = @intCast(str.len);
-    var i: isize = len - 1;
-    while (i >= 0) : (i -= 1) {
-        const digit = str[@intCast(i)];
-
-        // Check for valid digit
-        if (!std.ascii.isDigit(digit)) {
-            return null;
-        }
-
-        // Convert to integer
-        const value: usize = @intCast(digit - '0');
-        n += value * place;
-
-        // Update place for next iteration
-        place *= 10;
-    }
-
-    return n;
-}
-
 fn findIntegerSpan(str: []const u8, i: isize) ?[]const u8 {
     if (i < 0 or i >= str.len or !std.ascii.isDigit(str[@intCast(i)])) {
         return null;
@@ -89,7 +61,7 @@ fn gearRatio(lines: []const []const u8, i: isize) ?usize {
         while (j <= i + 1) : (j += 1) {
             if (findIntegerSpan(lines[k], j)) |slice| {
                 if (slice.ptr != prev_slice.ptr) {
-                    const partnum = parseInteger(slice).?;
+                    const partnum = std.fmt.parseInt(usize, slice, 10) catch unreachable;
                     gear_part_numbers += 1;
                     if (gear_part_numbers > 2) {
                         return null;
@@ -126,7 +98,7 @@ fn analyzeLine(
             // Count part number
             if (part) {
                 const int_slice = findIntegerSpan(lines[1], i + 1).?;
-                sum.part_number_sum += parseInteger(int_slice).?;
+                sum.part_number_sum += std.fmt.parseInt(usize, int_slice, 10) catch unreachable;
             }
 
             part = false;

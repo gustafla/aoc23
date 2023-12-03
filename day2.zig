@@ -8,6 +8,8 @@ const Error = error{
     InvalidSet,
 };
 
+// An implementation exists in std.fmt.parseInt but this was written
+// as an extra challenge :)
 fn parseInteger(str: []const u8) Error!usize {
     var n: usize = 0;
 
