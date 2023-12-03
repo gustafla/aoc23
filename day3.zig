@@ -116,10 +116,10 @@ fn analyzeLine(
     var part: bool = false;
 
     var i: isize = @intCast(lines[1].len);
-    while (i >= -1) : (i -= 1) {
-        const c = getSchematic(lines[1], i);
-
+    search: while (i >= -1) : (i -= 1) {
         sum.gear_ratio_sum += gearRatio(lines, i) orelse 0;
+
+        const c = getSchematic(lines[1], i);
 
         // If not a digit, reset parser and skip ahead
         if (!std.ascii.isDigit(c)) {
@@ -130,15 +130,22 @@ fn analyzeLine(
             }
 
             part = false;
-            continue;
+            continue :search;
+        }
+
+        if (part) {
+            continue :search;
         }
 
         // Check for adjacent parts in a 3x3 matrix
-        var j: isize = i - 1;
-        while (j <= i + 1) : (j += 1) {
-            for (0..3) |k| {
+        for (0..3) |k| {
+            var j: isize = i - 1;
+            while (j <= i + 1) : (j += 1) {
                 const cc = getSchematic(lines[k], j);
-                part = part or isPart(cc);
+                part = isPart(cc);
+                if (part) {
+                    continue :search;
+                }
             }
         }
     }
