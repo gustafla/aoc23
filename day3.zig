@@ -1,5 +1,57 @@
 const std = @import("std");
 
+fn parseInteger(str: []const u8) ?usize {
+    var n: usize = 0;
+
+    // Keep count of place (ones, tens, hundreds, ...)
+    var place: usize = 1;
+
+    // Iterate digits from last to first
+    const len: isize = @intCast(str.len);
+    var i: isize = len - 1;
+    while (i >= 0) : (i -= 1) {
+        const digit = str[@intCast(i)];
+
+        // Check for valid digit
+        if (!std.ascii.isDigit(digit)) {
+            return null;
+        }
+
+        // Convert to integer
+        const value: usize = @intCast(digit - '0');
+        n += value * place;
+
+        // Update place for next iteration
+        place *= 10;
+    }
+
+    return n;
+}
+
+fn findIntegerSpan(str: []const u8, i: isize) ?[]const u8 {
+    if (i < 0 or i >= str.len or !std.ascii.isDigit(str[@intCast(i)])) {
+        return null;
+    }
+
+    // Start index
+    var j: isize = i;
+    while (j >= 0) : (j -= 1) {
+        if (!std.ascii.isDigit(str[@intCast(j)])) {
+            break;
+        }
+    }
+    const start: usize = @intCast(j + 1);
+
+    // Stop index
+    for (@intCast(i)..str.len) |k| {
+        if (!std.ascii.isDigit(str[k])) {
+            return str[start..k];
+        }
+    }
+
+    return str[start..];
+}
+
 fn getSchematic(line: []const u8, index: isize) u8 {
     // Bounds check
     if (index < 0 or index >= line.len) {
@@ -12,29 +64,72 @@ fn isPart(c: u8) bool {
     return !std.ascii.isWhitespace(c) and !std.ascii.isDigit(c) and c != '.';
 }
 
-fn lineSum(
+const SchematicResult = struct {
+    part_number_sum: usize,
+    gear_ratio_sum: usize,
+
+    fn accumulate(self: *SchematicResult, other: SchematicResult) void {
+        self.part_number_sum += other.part_number_sum;
+        self.gear_ratio_sum += other.gear_ratio_sum;
+    }
+};
+
+fn gearRatio(lines: []const []const u8, i: isize) ?usize {
+    if (getSchematic(lines[1], i) != '*') {
+        return null;
+    }
+
+    var prev_slice: []const u8 = undefined;
+    var gear_part_numbers: usize = 0;
+    var ratio: usize = 1;
+
+    // Check for adjacent numbers in a 3x3 matrix
+    for (0..3) |k| {
+        var j: isize = i - 1;
+        while (j <= i + 1) : (j += 1) {
+            if (findIntegerSpan(lines[k], j)) |slice| {
+                if (slice.ptr != prev_slice.ptr) {
+                    const partnum = parseInteger(slice).?;
+                    gear_part_numbers += 1;
+                    if (gear_part_numbers > 2) {
+                        return null;
+                    }
+                    ratio *= partnum;
+                    prev_slice = slice;
+                }
+            }
+        }
+    }
+
+    if (gear_part_numbers != 2) {
+        return null;
+    }
+
+    return ratio;
+}
+
+fn analyzeLine(
     lines: []const []const u8,
-) usize {
-    var sum: usize = 0;
+) SchematicResult {
+    var sum = std.mem.zeroInit(SchematicResult, .{});
 
     var part: bool = false;
-    var place: usize = 1;
-    var integer: usize = 0;
 
     var i: isize = @intCast(lines[1].len);
     while (i >= -1) : (i -= 1) {
         const c = getSchematic(lines[1], i);
 
-        // If not a digit, reset integer parser and skip ahead
+        sum.gear_ratio_sum += gearRatio(lines, i) orelse 0;
+
+        // If not a digit, reset parser and skip ahead
         if (!std.ascii.isDigit(c)) {
-            // Count part
+            // Count part number
             if (part) {
-                sum += integer;
+                const int_slice = findIntegerSpan(lines[1], i + 1).?;
+                sum.part_number_sum += parseInteger(int_slice).?;
             }
 
             part = false;
-            place = 1;
-            integer = 0;
             continue;
         }
 
@@ -46,11 +141,6 @@ fn lineSum(
                 part = part or isPart(cc);
             }
         }
-
-        // Update integer parser
-        const value: usize = @intCast(c - '0');
-        integer += value * place;
-        place *= 10;
     }
 
     return sum;
@@ -61,7 +151,7 @@ pub fn main() !void {
     var in_buf = std.io.bufferedReader(in.reader());
     var in_r = in_buf.reader();
 
-    var sum: usize = 0;
+    var sum = std.mem.zeroInit(SchematicResult, .{});
 
     // Define a three-line buffer and slices pointing to each line
     var line_buf: [3][1024]u8 = undefined;
@@ -72,7 +162,7 @@ pub fn main() !void {
         lines[0] = next_line;
 
         // Update sum from previous line
-        sum += lineSum(&lines);
+        sum.accumulate(analyzeLine(&lines));
 
         // Swap pointers, switching underlying line_buf memory around
         // The effect of this pointer juggling is, that when the slices in the
@@ -87,7 +177,7 @@ pub fn main() !void {
 
     // Process remaining line
     lines[0].len = 0;
-    sum += lineSum(&lines);
+    sum.accumulate(analyzeLine(&lines));
 
     std.debug.print("{}\n", .{sum});
 }
