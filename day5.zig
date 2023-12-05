@@ -25,13 +25,18 @@ const MapEntry = struct {
     from: u64,
     to: u64,
     len: u64,
+
+    fn lessThan(ctx: void, lhs: MapEntry, rhs: MapEntry) bool {
+        _ = ctx;
+        return lhs.from < rhs.from;
+    }
 };
 
 fn indexOfStart(map: []const MapEntry, number: u64) ?usize {
     var nearest_i: ?usize = null;
     for (map, 0..) |entry, i| {
         if (entry.from > number) {
-            continue;
+            break;
         }
         if (nearest_i) |ni| {
             if (entry.from <= map[ni].from) {
@@ -97,6 +102,11 @@ pub fn main() !void {
         }
 
         try maps[n - 1].append(.{ .from = list.items[1], .to = list.items[0], .len = list.items[2] });
+    }
+
+    // Sort maps
+    for (maps) |map| {
+        std.sort.heap(MapEntry, map.items, {}, MapEntry.lessThan);
     }
 
     var min: u64 = 0xffff_ffff_ffff_ffff;
