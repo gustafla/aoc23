@@ -7,7 +7,6 @@ line_buffer:
 
 .globl _start
 _start:
-print_hello:
     // syscall read(int fd, const void *buf, size_t count)
     mov     x0, #0      // STDIN_FILENO
     ldr     x1, =line_buffer
