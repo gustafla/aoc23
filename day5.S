@@ -23,11 +23,11 @@ _start:
     /* syscall read(int fd, const void *buf, size_t count) */
     mov     x0, #0      /* fd := STDIN_FILENO */
     ldr     x1, =line_buffer    /* buf := line_buffer */
-    ldr     x2, #1      /* count := 1 */
+    mov     x2, #1      /* count := 1 */
     mov     w8, #63     /* read is syscall #63 */
     svc     #0          /* invoke syscall */
 
-    bkpt
+    .inst 0xd4200000    /* breakpoint */
 
     /* syscall exit(int status) */
     mov     x0, #0      /* status := 0 */
