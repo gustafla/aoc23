@@ -1,0 +1,16 @@
+https://wiki.cdot.senecacollege.ca/wiki/AArch64_Register_and_Instruction_Quick_Start
+
+# assemble and link:
+aarch64-linux-gnu-as -g -o day5.o day5.S && aarch64-linux-gnu-ld -o day5 day5.o
+
+# run on x86_64:
+qemu-aarch64-static -g 1234 ./day5
+
+# debug on x86_64:
+aarch64-linux-gnu-gdb -ex 'target remote localhost:1234'
+
+# inspect memory in gdb
+p (char[n])line_buffer
+
+# add a breakpoint in code
+.inst 0xd4200000    /* breakpoint */
