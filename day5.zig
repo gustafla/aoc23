@@ -5,8 +5,8 @@ const Gpa = std.heap.GeneralPurposeAllocator(.{});
 const Allocator = std.mem.Allocator;
 const Error = Gpa.Error || std.fmt.ParseIntError;
 
-fn parseList(alloc: Allocator, slice: []const u8) Error!List(u32) {
-    var list = try List(u32).initCapacity(alloc, 20);
+fn parseList(alloc: Allocator, slice: []const u8) Error!List(u64) {
+    var list = try List(u64).initCapacity(alloc, 20);
     errdefer list.deinit();
 
     var it = std.mem.splitScalar(u8, slice, ' ');
@@ -14,7 +14,7 @@ fn parseList(alloc: Allocator, slice: []const u8) Error!List(u32) {
         if (str.len == 0) {
             continue;
         }
-        const integer = try std.fmt.parseInt(u32, str, 10);
+        const integer = try std.fmt.parseInt(u64, str, 10);
         try list.append(integer);
     }
 
@@ -22,10 +22,40 @@ fn parseList(alloc: Allocator, slice: []const u8) Error!List(u32) {
 }
 
 const MapEntry = struct {
-    from: u32,
-    to: u32,
-    len: u32,
+    from: u64,
+    to: u64,
+    len: u64,
 };
+
+fn indexOfStart(map: []const MapEntry, number: u64) ?usize {
+    var nearest_i: ?usize = null;
+    for (map, 0..) |entry, i| {
+        if (entry.from > number) {
+            continue;
+        }
+        if (nearest_i) |ni| {
+            if (entry.from <= map[ni].from) {
+                continue;
+            }
+        }
+        nearest_i = i;
+    }
+    return nearest_i;
+}
+
+fn mapSeed(maps: []const List(MapEntry), seed: u64) u64 {
+    var number = seed;
+    for (maps) |map| {
+        if (indexOfStart(map.items, number)) |i| {
+            const entry = map.items[i];
+            if (number < entry.from + entry.len) {
+                number = number - entry.from + entry.to;
+            }
+            continue;
+        }
+    }
+    return number;
+}
 
 pub fn main() !void {
     const in = std.io.getStdIn();
@@ -69,16 +99,27 @@ pub fn main() !void {
         try maps[n - 1].append(.{ .from = list.items[1], .to = list.items[0], .len = list.items[2] });
     }
 
+    var min: u64 = 0xffff_ffff_ffff_ffff;
     for (seeds.items) |seed| {
-        std.debug.print("Seed {}\n", .{seed});
+        const location = mapSeed(&maps, seed);
+        if (location < min) {
+            min = location;
+        }
+        std.debug.print("Seed {} location {}\n", .{ seed, location });
     }
+    std.debug.print("min location {}\n", .{min});
 
-    for (maps, 1..) |map, i| {
-        std.debug.print("\nMap {}:\n", .{i});
-        for (map.items) |entry| {
-            std.debug.print("\t{any}\n", .{entry});
+    min = 0xffff_ffff_ffff_ffff;
+    for (0..seeds.items.len / 2) |i| {
+        for (seeds.items[i * 2]..seeds.items[i * 2] + seeds.items[i * 2 + 1]) |seed| {
+            const location = mapSeed(&maps, seed);
+            if (location < min) {
+                min = location;
+            }
+            //std.debug.print("Seed (range) {} location {}\n", .{ seed, location });
         }
     }
+    std.debug.print("min (range) location {}\n", .{min});
 
     return;
 
