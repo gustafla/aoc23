@@ -13,10 +13,14 @@ line_buffer:
 
 read_line:
     sub     sp, sp, 32          // create a new stack frame
-    str     x30, [sp]           // push return location
+    str     x30, [sp]           // push return location (unnecessary)
+                                // we could (and should) use registers 3-7
+                                // for scratch, because they are call-clobbered
+                                // so this function is free to mess with them
+                                // without storing any registers in the stack.
+                                // Still, r19 and 20 are used as an exercise.
     str     x19, [sp, 8]        // push r19 value (callee saves)
     str     x20, [sp, 16]       // push r20 value (callee saves)
-
     mov     x19, 0              // set index at 0
 
     mov     x0, 0               // STDIN_FILENO
@@ -45,11 +49,10 @@ read_line_ret:
 .globl _start
 _start:
     bl      read_line
-    mov     x19, x0
+    mov     x2, x0              // use return value as count-parameter
                                 // syscall write(int fd, const void *buf, size_t count)
     mov     x0, 1               // fd := STDOUT_FILENO
     ldr     x1, =line_buffer
-    mov     x2, x19             // use index as count-parameter
     mov     w8, 64              // write is syscall 64
     svc     0
                                 // syscall exit(int status)
