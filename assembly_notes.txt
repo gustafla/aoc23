@@ -1,6 +1,7 @@
 https://wiki.cdot.senecacollege.ca/wiki/AArch64_Register_and_Instruction_Quick_Start
 https://www.cs.princeton.edu/courses/archive/spr19/cos217/lectures/15_AssemblyFunctions.pdf
 https://dede.dev/posts/ARM64-Calling-Convention-Cheat-Sheet
+https://developer.arm.com/documentation/dui0802/a/A64-General-Instructions/A64-general-instructions-in-alphabetical-order
 
 # assemble and link:
 aarch64-linux-gnu-as -g -o day5.o day5.S && aarch64-linux-gnu-ld -o day5 day5.o
