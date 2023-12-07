@@ -127,27 +127,19 @@ const Hand = struct {
         std.debug.print("\nComparing cards {s} and {s}\n", .{ toStr(lhs), toStr(rhs) });
         std.debug.print("    {s} and {s}\n", .{ @tagName(lhs.type), @tagName(rhs.type) });
 
-        // High card
-        if (lhs.type == .high_card and rhs.type == .high_card) {
-            std.debug.print("Must decide high card\n", .{});
-            const max_l = std.sort.max(Card, &lhs.cards, {}, Card.lessThan).?;
-            const max_r = std.sort.max(Card, &rhs.cards, {}, Card.lessThan).?;
-            if (@intFromEnum(max_l) < @intFromEnum(max_r)) {
-                return true;
-            }
-            if (@intFromEnum(max_l) > @intFromEnum(max_r)) {
-                return false;
-            }
-        }
-
-        // Default rule
+        // Same type, uh oh
         if (lhs.type == rhs.type) {
-            std.debug.print("Fall back to default rule\n", .{});
-            return lessThanDefaultRule(lhs, rhs);
+            // Default rule
+            std.debug.print("    Fall back to default rule\n", .{});
+            const result = lessThanDefaultRule(lhs, rhs);
+            std.debug.print("    Left is{s} lesser.\n", .{if (result) "" else "n't"});
+            return result;
         }
 
         // Best type of hand
-        return @intFromEnum(lhs.type) < @intFromEnum(rhs.type);
+        const result = @intFromEnum(lhs.type) < @intFromEnum(rhs.type);
+        std.debug.print("    Left is{s} lesser.\n", .{if (result) "" else "n't"});
+        return result;
     }
 };
 
