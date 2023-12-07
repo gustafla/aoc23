@@ -3,6 +3,7 @@ const std = @import("std");
 const Error = error{ InvalidCard, MalformedLine } || std.fmt.ParseIntError;
 
 const Card = enum {
+    j,
     c2,
     c3,
     c4,
@@ -12,7 +13,6 @@ const Card = enum {
     c8,
     c9,
     t,
-    j,
     q,
     k,
     a,
@@ -24,7 +24,7 @@ const Card = enum {
 
     fn parse(char: u8) Error!Card {
         return switch (char) {
-            '2'...'9' => @enumFromInt(char - '2'),
+            '2'...'9' => @enumFromInt(char - '2' + 1),
             'T' => .t,
             'J' => .j,
             'Q' => .q,
@@ -55,22 +55,51 @@ const HandType = enum {
         for (cards) |card| {
             c[@intFromEnum(card)] += 1;
         }
-        std.mem.sort(u3, &c, {}, std.sort.desc(u3));
+        const jokers = c[0];
+        const others = c[1..];
+        std.mem.sort(u3, others, {}, std.sort.desc(u3));
         // Hand with greatest count of same card in earlier place is most valuable
-        return switch (c[0]) {
+        return switch (jokers) {
             5 => .five_of_a_kind,
-            4 => .four_of_a_kind,
-            3 => switch (c[1]) {
-                2 => .full_house,
-                1 => .three_of_a_kind,
+            4 => .five_of_a_kind,
+            3 => switch (others[0]) {
+                2 => .five_of_a_kind,
+                1 => .four_of_a_kind,
                 else => unreachable,
             },
-            2 => switch (c[1]) {
-                2 => .two_pair,
+            2 => switch (others[0]) {
+                3 => .five_of_a_kind,
+                2 => .four_of_a_kind,
+                1 => .three_of_a_kind, // todo ??
+                else => unreachable,
+            },
+            1 => switch (others[0]) {
+                4 => .five_of_a_kind,
+                3 => .four_of_a_kind,
+                2 => switch (others[1]) {
+                    2 => .full_house,
+                    1 => .three_of_a_kind,
+                    else => unreachable,
+                },
                 1 => .one_pair,
                 else => unreachable,
             },
-            1 => .high_card,
+            0 => switch (others[0]) {
+                5 => .five_of_a_kind,
+                4 => .four_of_a_kind,
+                3 => switch (others[1]) {
+                    2 => .full_house,
+                    1 => .three_of_a_kind,
+                    else => unreachable,
+                },
+                2 => switch (others[1]) {
+                    2 => .two_pair,
+                    1 => .one_pair,
+                    else => unreachable,
+                },
+                1 => .high_card,
+                else => unreachable,
+            },
             else => unreachable,
         };
     }
