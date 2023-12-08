@@ -49,10 +49,10 @@ pub fn main() !void {
     const allocator = arena.allocator();
 
     const nodes = base * base * base;
-    //var adjmat = try allocator.create([nodes][nodes]bool);
-    //adjmat.* = std.mem.zeroInit([nodes * nodes]bool, .{});
     var adjlist = try allocator.alloc([2]Node, nodes);
     var directions = try std.ArrayList(Direction).initCapacity(allocator, 1024);
+    var starts = try std.ArrayList(Node).initCapacity(allocator, base * base);
+    var ends = try std.ArrayList(Node).initCapacity(allocator, base * base);
 
     var line_buf = try std.ArrayList(u8).initCapacity(allocator, 1024);
     const writer = line_buf.writer();
@@ -82,6 +82,13 @@ pub fn main() !void {
         const nodestr = std.mem.trim(u8, line[0..eqsign], " \t");
         const node = try parseNode(nodestr);
 
+        // Add to starts, ends
+        switch (node % base) {
+            0 => try starts.append(node),
+            base - 1 => try ends.append(node),
+            else => {},
+        }
+
         // Parse edges
         const edgestr = line[eqsign + 1 ..];
         const comma = std.mem.indexOfScalar(u8, edgestr, ',') orelse return Error.InvalidLine;
@@ -90,12 +97,11 @@ pub fn main() !void {
         const left = try parseNode(std.mem.trim(u8, leftstr, " \t(,"));
         const right = try parseNode(std.mem.trim(u8, rightstr, " \t),"));
 
-        std.debug.print("{} = ({}, {})\n", .{ node, left, right });
-        //adjmat[node][left] = true;
-        //adjmat[node][right] = true;
         adjlist[node][0] = left;
         adjlist[node][1] = right;
     }
+
+    std.debug.assert(starts.items.len == ends.items.len);
 
     var i: usize = 0;
     var node = parseNode("AAA") catch unreachable;
@@ -105,5 +111,5 @@ pub fn main() !void {
         node = adjlist[node][@intFromEnum(direction)];
     }
 
-    std.debug.print("Traversal took {} steps\n", .{i});
+    std.debug.print("Basic raversal took {} steps\n", .{i});
 }
