@@ -39,6 +39,15 @@ fn parseNode(str: []const u8) Error!Node {
     return sum;
 }
 
+pub fn allEnd(nodes: []const Node) bool {
+    for (nodes) |node| {
+        if (node % base != base - 1) {
+            return false;
+        }
+    }
+    return true;
+}
+
 pub fn main() !void {
     const in = std.io.getStdIn();
     var in_buf = std.io.bufferedReader(in.reader());
@@ -104,12 +113,21 @@ pub fn main() !void {
     std.debug.assert(starts.items.len == ends.items.len);
 
     var i: usize = 0;
-    var node = parseNode("AAA") catch unreachable;
+    var start = parseNode("AAA") catch unreachable;
     const goal = parseNode("ZZZ") catch unreachable;
-    while (node != goal) : (i += 1) {
+    while (start != goal) : (i += 1) {
         const direction = directions.items[i % directions.items.len];
-        node = adjlist[node][@intFromEnum(direction)];
+        start = adjlist[start][@intFromEnum(direction)];
     }
 
-    std.debug.print("Basic raversal took {} steps\n", .{i});
+    std.debug.print("Basic traversal took {} steps\n", .{i});
+
+    i = 0;
+    while (!allEnd(starts.items)) : (i += 1) {
+        const direction = directions.items[i % directions.items.len];
+        for (starts.items) |*node| {
+            node.* = adjlist[node.*][@intFromEnum(direction)];
+        }
+    }
+    std.debug.print("Advanced traversal took {} steps\n", .{i});
 }
