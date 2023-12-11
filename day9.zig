@@ -32,6 +32,24 @@ fn nextValue(values: []i32) i32 {
     return nextValue(target) + values[values.len - 1];
 }
 
+fn prevValue(values: []i32) i32 {
+    std.debug.print("{any}\n", .{values});
+    if (values.len < 2) {
+        @panic("wtf");
+    }
+
+    if (std.mem.allEqual(i32, values, values[0])) {
+        return values[0];
+    }
+
+    var i = values.len - 1;
+    while (i > 0) : (i -= 1) {
+        values[i] = values[i] - values[i - 1];
+    }
+
+    return values[0] - prevValue(values[1..]);
+}
+
 pub fn main() !void {
     const in = std.io.getStdIn();
     var in_buf = std.io.bufferedReader(in.reader());
@@ -43,6 +61,7 @@ pub fn main() !void {
 
     var report = try std.ArrayList(i32).initCapacity(allocator, 20);
     var sum: i64 = 0;
+    var bsum: i64 = 0;
 
     var line_buf = try std.ArrayList(u8).initCapacity(allocator, 1024);
     const writer = line_buf.writer();
@@ -58,12 +77,20 @@ pub fn main() !void {
         }
 
         try parseList(&report, line_buf.items);
-        const next = nextValue(report.items);
+        const working_copy = try report.clone();
+        defer working_copy.deinit();
+
+        const next = nextValue(working_copy.items);
         std.debug.print("Next is {}\n", .{next});
         sum += next;
+
+        const prev = prevValue(report.items);
+        std.debug.print("Previous is {}\n", .{prev});
+        bsum += prev;
 
         report.clearRetainingCapacity();
     }
 
     std.debug.print("Sum {}\n", .{sum});
+    std.debug.print("Backwards sum {}\n", .{bsum});
 }
