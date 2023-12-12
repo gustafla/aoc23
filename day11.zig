@@ -13,6 +13,18 @@ fn printImage(columns: []const List(bool)) void {
     }
 }
 
+fn parseRow(columns: []List(bool), expand_rows: *List(usize), line: []const u8, i: usize) Error!void {
+    var empty = true;
+    for (columns, line) |*column, char| {
+        const galaxy = char == '#';
+        try column.append(galaxy);
+        empty = empty and !galaxy;
+    }
+    if (empty) {
+        try expand_rows.append(i);
+    }
+}
+
 pub fn main() !void {
     const in = std.io.getStdIn();
     var in_buf = std.io.bufferedReader(in.reader());
@@ -27,14 +39,19 @@ pub fn main() !void {
 
     // Parse first line and allocate columns
     try in_r.streamUntilDelimiter(writer, '\n', null);
+    // Initialize row expansion list
+    var expand_rows = try List(usize).initCapacity(allocator, 1024);
+    // Allocate and initialize columns
     const columns = try allocator.alloc(List(bool), line_buf.items.len);
-    for (columns, line_buf.items) |*column, char| {
+    for (columns) |*column| {
         column.* = try List(bool).initCapacity(allocator, 1024);
-        try column.append(char == '#');
     }
+    // Parse first line
+    try parseRow(columns, &expand_rows, line_buf.items, 0);
     line_buf.clearRetainingCapacity();
 
     // Parse rest of the lines
+    var i: usize = 1;
     while (r: {
         in_r.streamUntilDelimiter(writer, '\n', null) catch |e| switch (e) {
             error.EndOfStream => break :r false,
@@ -45,11 +62,19 @@ pub fn main() !void {
         if (line_buf.items.len == 0) {
             continue;
         }
+        try parseRow(columns, &expand_rows, line_buf.items, i);
+        i += 1;
+    }
 
-        for (columns, line_buf.items) |*column, char| {
-            try column.append(char == '#');
+    // Initialize column expansion list
+    var expand_cols = try List(usize).initCapacity(allocator, columns[0].items.len);
+    for (columns, 0..) |column, j| {
+        if (std.mem.allEqual(bool, column.items, false)) {
+            try expand_cols.append(j);
         }
     }
 
+    std.debug.print("Expand rows: {any}\n", .{expand_rows.items});
+    std.debug.print("Expand cols: {any}\n", .{expand_cols.items});
     printImage(columns);
 }
