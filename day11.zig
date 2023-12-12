@@ -30,13 +30,13 @@ const Galaxy = struct {
     column: usize,
     row: usize,
 
-    fn distance(self: Galaxy, other: Galaxy, expand_rows: []const usize, expand_cols: []const usize) usize {
+    fn distance(self: Galaxy, other: Galaxy, expand_rows: []const usize, expand_cols: []const usize, expansion: usize) usize {
         const min_col = @min(self.column, other.column);
         const max_col = @max(self.column, other.column);
         const min_row = @min(self.row, other.row);
         const max_row = @max(self.row, other.row);
 
-        return (max_col - min_col) + (max_row - min_row) + inBetweenCount(min_col, max_col, expand_cols) + inBetweenCount(min_row, max_row, expand_rows);
+        return (max_col - min_col) + (max_row - min_row) + inBetweenCount(min_col, max_col, expand_cols) * (expansion - 1) + inBetweenCount(min_row, max_row, expand_rows) * (expansion - 1);
     }
 };
 
@@ -118,9 +118,22 @@ pub fn main() !void {
             if (a == b) {
                 continue;
             }
-            sum += galaxies.items[a].distance(galaxies.items[b], expand_rows.items, expand_cols.items);
+            sum += galaxies.items[a].distance(galaxies.items[b], expand_rows.items, expand_cols.items, 2);
         }
     }
 
     std.debug.print("Sum of all pair distances: {}\n", .{sum});
+
+    sum = 0;
+    a = 0;
+    while (a < galaxies.items.len) : (a += 1) {
+        for (a..galaxies.items.len) |b| {
+            if (a == b) {
+                continue;
+            }
+            sum += galaxies.items[a].distance(galaxies.items[b], expand_rows.items, expand_cols.items, 1000000);
+        }
+    }
+
+    std.debug.print("Sum of all pair distances with advanced expansion: {}\n", .{sum});
 }
