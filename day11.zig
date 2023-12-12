@@ -13,12 +13,42 @@ fn printImage(columns: []const List(bool)) void {
     }
 }
 
-fn parseRow(columns: []List(bool), expand_rows: *List(usize), line: []const u8, i: usize) Error!void {
+fn inBetweenCount(min: usize, max: usize, list: []const usize) usize {
+    var count: usize = 0;
+    for (list) |item| {
+        if (item >= max) {
+            break;
+        }
+        if (item > min) {
+            count += 1;
+        }
+    }
+    return count;
+}
+
+const Galaxy = struct {
+    column: usize,
+    row: usize,
+
+    fn distance(self: Galaxy, other: Galaxy, expand_rows: []const usize, expand_cols: []const usize) usize {
+        const min_col = @min(self.column, other.column);
+        const max_col = @max(self.column, other.column);
+        const min_row = @min(self.row, other.row);
+        const max_row = @max(self.row, other.row);
+
+        return (max_col - min_col) + (max_row - min_row) + inBetweenCount(min_col, max_col, expand_cols) + inBetweenCount(min_row, max_row, expand_rows);
+    }
+};
+
+fn parseRow(columns: []List(bool), expand_rows: *List(usize), galaxies: *List(Galaxy), line: []const u8, i: usize) Error!void {
     var empty = true;
-    for (columns, line) |*column, char| {
+    for (columns, line, 0..) |*column, char, j| {
         const galaxy = char == '#';
         try column.append(galaxy);
-        empty = empty and !galaxy;
+        if (galaxy) {
+            empty = false;
+            try galaxies.append(.{ .column = j, .row = i });
+        }
     }
     if (empty) {
         try expand_rows.append(i);
@@ -34,8 +64,11 @@ pub fn main() !void {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    var line_buf = try std.ArrayList(u8).initCapacity(allocator, 1024);
+    var line_buf = try List(u8).initCapacity(allocator, 1024);
     const writer = line_buf.writer();
+
+    // Initialize galaxy list
+    var galaxies = try List(Galaxy).initCapacity(allocator, 1024);
 
     // Parse first line and allocate columns
     try in_r.streamUntilDelimiter(writer, '\n', null);
@@ -47,7 +80,7 @@ pub fn main() !void {
         column.* = try List(bool).initCapacity(allocator, 1024);
     }
     // Parse first line
-    try parseRow(columns, &expand_rows, line_buf.items, 0);
+    try parseRow(columns, &expand_rows, &galaxies, line_buf.items, 0);
     line_buf.clearRetainingCapacity();
 
     // Parse rest of the lines
@@ -62,7 +95,7 @@ pub fn main() !void {
         if (line_buf.items.len == 0) {
             continue;
         }
-        try parseRow(columns, &expand_rows, line_buf.items, i);
+        try parseRow(columns, &expand_rows, &galaxies, line_buf.items, i);
         i += 1;
     }
 
@@ -74,7 +107,20 @@ pub fn main() !void {
         }
     }
 
+    std.debug.print("{} galaxies.\n", .{galaxies.items.len});
     std.debug.print("Expand rows: {any}\n", .{expand_rows.items});
     std.debug.print("Expand cols: {any}\n", .{expand_cols.items});
-    printImage(columns);
+
+    var sum: usize = 0;
+    var a: usize = 0;
+    while (a < galaxies.items.len) : (a += 1) {
+        for (a..galaxies.items.len) |b| {
+            if (a == b) {
+                continue;
+            }
+            sum += galaxies.items[a].distance(galaxies.items[b], expand_rows.items, expand_cols.items);
+        }
+    }
+
+    std.debug.print("Sum of all pair distances: {}\n", .{sum});
 }
