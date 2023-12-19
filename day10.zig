@@ -61,8 +61,12 @@ const Maze = struct {
     tiles: []?Pipe,
     start: Position,
 
+    fn containsPos(self: Maze, position: Position) bool {
+        return position.x >= 0 and position.y >= 0 and position.x < self.width and position.y < self.height;
+    }
+
     fn get(self: Maze, position: Position) ?Pipe {
-        if (position.x < 0 or position.y < 0 or position.x > self.width or position.y > self.height) {
+        if (!self.containsPos(position)) {
             return null;
         }
         const row: usize = @intCast(position.y);
@@ -132,13 +136,17 @@ const Maze = struct {
         return maze;
     }
 
-    fn loopLength(self: Maze) ?u32 {
+    fn processLoop(self: Maze, fill: []bool) ?u32 {
         var walked: ?Direction = null;
         var at = self.start;
         var underfoot = self.get(at).?;
         var length: u32 = 0;
 
         walk: while (walked == null or !std.meta.eql(at, self.start)) : (length += 1) {
+            const x: usize = @intCast(at.x);
+            const y: usize = @intCast(at.y);
+            fill[y * self.width + x] = true;
+
             for (0..4) |i| {
                 const dir: Direction = @enumFromInt(@as(u4, 1) << @intCast(i));
 
@@ -176,6 +184,38 @@ const Maze = struct {
     }
 };
 
+fn search(fill: []const bool, maze: Maze, at: Position, depth: u32) ?u32 {
+    // Base case #1, if overran from maze edge, do not count any tiles
+    if (!maze.containsPos(at)) {
+        return null;
+    }
+
+    // Check for max tile count in each cardinal direction
+    var maximum: u32 = depth;
+    for (0..4) |i| {
+        const dir: Direction = @enumFromInt(@as(u4, 1) << @intCast(i));
+        const neighbor = at.step(dir);
+        const x: usize = @intCast(neighbor.x);
+        const y: usize = @intCast(neighbor.y);
+
+        // If direction is available
+        if (!fill[y * maze.width + x]) {
+            // Set the tile as visited/blocked
+            fill[y * maze.width + x] = true;
+            const next = search(fill, maze, neighbor, depth + 1);
+            // If search finds maze edge, do not count any tiles
+            if (next == null) {
+                return null;
+            }
+            // Find the most tiles counted
+            maximum = @max(maximum, next.?);
+        }
+    }
+
+    // Base case #2, all options exhausted and didn't overrun the maze edge
+    return maximum;
+}
+
 pub fn main() !void {
     const in = std.io.getStdIn();
     var in_buf = std.io.bufferedReader(in.reader());
@@ -189,5 +229,10 @@ pub fn main() !void {
     try in_r.readAllArrayList(&line_buf, 1024 * 1024);
 
     const maze = try Maze.init(allocator, line_buf.items);
-    std.debug.print("Simple solution: {}\n", .{maze.loopLength().? / 2});
+    const fill = try allocator.alloc(bool, maze.width * maze.height);
+    for (fill) |*tile| {
+        tile.* = false;
+    }
+    const len = maze.processLoop(fill).?;
+    std.debug.print("Simple solution: {}\n", .{len / 2});
 }
