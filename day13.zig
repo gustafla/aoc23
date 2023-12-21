@@ -34,33 +34,27 @@ const Pattern = struct {
     }
 };
 
-fn linesAbove(yyc: struct { usize, usize }) usize {
-    std.debug.print("lower is at {} and upper is at {}... ", .{ yyc[0], yyc[1] });
-    const span = (yyc[0] - yyc[1]);
-    std.debug.print("their range spans {} lines... ", .{span});
-    const above = yyc[0] - span / 2 + if (yyc[1] == 0) @as(usize, 0) else 1; // off by one fix oof
-    std.debug.print("thus there must be {} lines above the center\n", .{above});
-    return above;
-}
-
-fn analyzeLines(pat: Pattern) struct { usize, usize } {
+fn analyzeLines(pat: Pattern) ?usize {
+    var starty: ?usize = null;
     var yc: usize = 1;
     for (1..pat.mat.len / pat.width) |y| {
         std.debug.print("y={}, yc={}... ", .{ y, yc - 1 });
         // If lines being compared match
         if (std.mem.eql(u8, pat.mat[y * pat.width ..][0..pat.width], pat.mat[(yc - 1) * pat.width ..][0..pat.width])) {
+            starty = starty orelse y;
             std.debug.print("match\n", .{});
             // If mirror line index is at end, return
             if (yc == 1) {
-                return .{ y, yc - 1 };
+                return starty;
             }
             yc -= 1;
         } else {
+            starty = null;
             std.debug.print("no match\n", .{});
             yc = y + 1;
         }
     }
-    return .{ pat.mat.len / pat.width - 1, yc - 1 };
+    return starty;
 }
 
 pub fn main() !void {
@@ -93,8 +87,8 @@ pub fn main() !void {
                 p.print();
                 const analysis = analyzeLines(p);
                 std.debug.print("Analysis: {any}\n", .{analysis});
-                if (analysis[0] != analysis[1]) {
-                    sum += linesAbove(analysis) * weight;
+                if (analysis) |a| {
+                    sum += a * weight;
                 }
             }
             tat.deinit(allocator);
