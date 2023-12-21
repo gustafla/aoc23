@@ -1,4 +1,4 @@
-# Advent of code 2023 solutions by Lauri Gustafsson
+# Advent of Code 2023
 
 Solutions are written for Zig 0.12.0-dev.1830. To build a solution run:
 ```
